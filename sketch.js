@@ -1,99 +1,84 @@
-let tideLevel = 0;
-let waterTemp = 0;
-let currentField = []; // Store flow field data
+let tideLevels = [];  // Stores tide level for each day
+let waterTemps = [];  // Stores water temperature for each day
+let oceanCurrents = []; // Stores current speed & direction for each day
+let resolution = 50; // Number of arrows to draw
+let maxspeed = 5; // Maximum current speed
 
-let cols, rows;
-let gridSize = 20; // Grid resolution for flow field
+let offset = 0; // Offset for scrolling through days
 
 function setup() {
-  createCanvas(600, 400);
-  cols = width / gridSize;
-  rows = height / gridSize;
+  createCanvas(1920, 1080);
   fetchOceanData();
 }
 
 function draw() {
-    background(255);// Water temp affects color
-
-  // Draw tide level as a wave
-  let tideY = map(tideLevel, -2, 2, height - 50, 50);
-
-  // Draw ocean current as a flow field
-  drawFlowField();
-}
-
-function drawFlowField() {
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
-      let { direction, speed, age } = currentField[y][x];
-
-      let angle = radians(direction);
-      let length = map(speed, 0, 2, 5, 20); // Normalize speed
-
-      let startX = x * gridSize;
-      let startY = y * gridSize;
-      let endX = startX + cos(angle) * length;
-      let endY = startY + sin(angle) * length;
-
-      stroke(255, map(age, 0, 4, 255, 50)); // Older data = more faded
-      line(startX, startY, endX, endY);
-    }
-  }
+  background(0);
+  offset = (offset + 1) % 5;
+    // Visualize ocean current data
+  drawOceanCurrents(offset);
 }
 
 function fetchOceanData() {
-  let stationID = "9410230"; // La Jolla for tides & temp
-  let currentsStationID = "ca0101"; // cape cod
+  let stationID = "9410230"; // La Jolla (for tides & temp)
+  let currentsStationID = "ca0101"; // Cape Cod (currents)
   const baseURL = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter";
 
-  let days = 5; // Fetch ocean currents for multiple days
-  let promises = [];
+  //let dates = ["2024-10-01", "2023-10-02", "2023-10-03", "2023-10-04", "2023-10-05"];
+    let today = new Date();
+    let dates = [];
+    for (let i = 0; i < resolution; i++) {
+        let date = new Date(today);
+        date.setDate(today.getDate() - i);
+        dates.push(date.toISOString().split('T')[0]);
+    }
+  let promises = dates.map(date => {
+    let currentsURL = `${baseURL}?station=${currentsStationID}&product=currents&begin_date=${date}&end_date=${date}&units=metric&time_zone=gmt&format=json`;
+    let tidesURL = `${baseURL}?station=${stationID}&product=water_level&begin_date=${date}&end_date=${date}&datum=MLLW&units=metric&time_zone=gmt&format=json`;
+    let waterTempURL = `${baseURL}?station=${stationID}&product=water_temperature&begin_date=${date}&end_date=${date}&units=metric&time_zone=gmt&format=json`;
 
-  for (let i = 0; i < days; i++) {
-    let day = new Array();
-    let dates = ["2023-10-01", "2023-10-02", "2023-10-03", "2023-10-04", "2023-10-05"];
-    let formattedDate = dates[i];
-
-    let currentsURL = `${baseURL}?station=${currentsStationID}&product=currents&begin_date=${formattedDate}&end_date=${formattedDate}&units=metric&time_zone=gmt&format=json`;
-    let tidesURL = `${baseURL}?station=${stationID}&product=water_level&begin_date=${formattedDate}&end_date=${formattedDate}&datum=MLLW&units=metric&time_zone=gmt&format=json`;
-    let waterTempURL = `${baseURL}?station=${stationID}&product=water_temperature&begin_date=${formattedDate}&end_date=${formattedDate}&units=metric&time_zone=gmt&format=json`;
-    let currentsPromise = fetch(currentsURL).then(res => res.json());
-    let tidesPromise = fetch(tidesURL).then(res => res.json());
-    let waterTempPromise = fetch(waterTempURL).then(res => res.json());
-
-    promises.push(Promise.all([currentsPromise, tidesPromise, waterTempPromise]));
-  }
+    return Promise.all([
+      fetch(currentsURL).then(res => res.json()),
+      fetch(tidesURL).then(res => res.json()),
+      fetch(waterTempURL).then(res => res.json())
+    ]);
+  });
 
   Promise.all(promises)
-    .then((responses) => {
-      let tidesData = responses[days]; // Last two responses are tides & temp
-      let tempData = responses[days + 1];
+    .then(responses => {
+      responses.forEach(([currentsData, tidesData, tempData], index) => {
+        let tideLevel = tidesData.data && tidesData.data.length ? parseFloat(tidesData.data[0].v) || 0 : 0;
+        let waterTemp = tempData.data && tempData.data.length ? parseFloat(tempData.data[0].v) || 0 : 0;
+        let currentSpeed = currentsData.data && currentsData.data.length ? parseFloat(currentsData.data[0].s) || 0 : 0;
+        let currentDirection = currentsData.data && currentsData.data.length ? parseFloat(currentsData.data[0].d) || 0 : 0;
 
-      console.log("Tide Data:", tidesData);
-      console.log("Water Temp Data:", tempData);
-
-      tideLevel = tidesData.data ? parseFloat(tidesData.data[0].v) || 0 : 0;
-      waterTemp = tempData.data ? parseFloat(tempData.data[0].v) || 0 : 0;
-
-      // Extract ocean current data and generate the flow field
-      currentField = Array(rows).fill().map(() => Array(cols).fill({ direction: 0, speed: 0 }));
-
-      responses.slice(0, days).forEach((dayData, dayIndex) => {
-        if (dayData.data && dayData.data.length > 0) {
-          let latestEntry = dayData.data[0]; // Get first available entry
-
-          let direction = parseFloat(latestEntry.d) || 0;
-          let speed = parseFloat(latestEntry.s) || 0;
-
-          for (let y = 0; y < rows; y++) {
-            for (let x = 0; x < cols; x++) {
-              currentField[y][x] = { direction, speed, age: dayIndex };
-            }
-          }
-        }
+        tideLevels.push({ date: dates[index], level: tideLevel });
+        waterTemps.push({ date: dates[index], temp: waterTemp });
+        oceanCurrents.push({ date: dates[index], speed: currentSpeed, direction: currentDirection });
       });
 
-      console.log("Flow Field Data:", currentField);
+      console.log("Tide Levels:", tideLevels);
+      console.log("Water Temperatures:", waterTemps);
+      console.log("Ocean Currents:", oceanCurrents);
     })
     .catch(error => console.error("API Fetch Error:", error));
+}
+
+function drawOceanCurrents(offset) {
+    widthRatio = width / resolution;
+    heightRatio = height / resolution;
+    for(let i = 0; i < oceanCurrents.length; i++) {
+        for (let j = 0; j < resolution; j++) {
+            let angle = radians(oceanCurrents[i].direction);
+            let length = oceanCurrents[i].speed/maxspeed; // Normalize speed
+
+            let x = j*widthRatio + widthRatio/2; // Space out arrows
+            let y = i*heightRatio+ heightRatio/2; // Space out rows
+            let endX = x + cos(angle) * length;
+            let endY = y + sin(angle) * length;
+
+            stroke(waterTemps[i].temp, 255, 255, (tideLevels[i].level+0.5)*255);
+            line(x, y, endX, endY);
+            fill(255);
+        }
+    };
 }
