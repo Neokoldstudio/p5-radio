@@ -23,7 +23,8 @@ let frameCounter = 0;
 let lerpSpeed = 0.03;
 let blendingProgress = 0; // 0 to 1 progress of blending
 let drawBackground = true;
-let backgroundBlend = 0.04;
+let drawTrails = false;
+let backgroundBlend = 0.06;
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
@@ -32,7 +33,10 @@ function setup() {
 }
 
 function draw() {
-    if(drawBackground) background(0,backgroundBlend);
+    if (drawBackground) { 
+        if (drawTrails) background(0, backgroundBlend);
+        else background(0);
+    }
 
     if (oceanCurrents.length === 0) return;
 
