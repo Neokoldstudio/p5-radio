@@ -1,18 +1,7 @@
-let stations = [["8575512", "cb1102"], ["8518750", "n03020"], ["8573927", "cb1301"], ["9414750", "s10010"], ["9418767", "hb0401"]];
+let stations = [["8575512", "cb1102"], ["8518750", "n03020"], ["8573927", "cb1301"], ["9414750", "s10010"], ["9418767", "hb0401"], ["9414863","s08010"],["9445958","ks0101"]];
 let tideLevels = [];  // Stores tide level for each day
 let waterTemps = [];  // Stores water temperature for each day
 let oceanCurrents = []; // Stores current speed & direction for each day
-let resolution = 100; // Number of arrows to draw
-let maxspeed = 50; // Maximum current speed
-
-let maxDistance = 30; // Maximum distance from mouse to reverse arrow direction
-let animationProgress = 0;  // Lerp progress (0 to 1)
-let animationSpeed = 0.02;  // Speed of interpolation
-let previousCurrents = [];  // Stores previous step's currents
-let transitionFrames = 15; // Time before shifting data
-let shiftFrames = 15; // Frames over which to blend data
-let frameCounter = 0;
-let lerpSpeed = 0.03;
 
 let visualArrows = [];
 let visualTemps = [];
@@ -22,8 +11,19 @@ let nextArrows = [];
 let nextTemps = [];
 let nextTides = [];
 
+let resolution = 20; // Number of arrows to draw
+let maxspeed = 50; // Maximum current speed
+let maxDistance = 80; // Maximum distance from mouse to reverse arrow direction
+let animationProgress = 0;  // Lerp progress (0 to 1)
+let animationSpeed = 0.02;  // Speed of interpolation
+let previousCurrents = [];  // Stores previous step's currents
+let transitionFrames = 15; // Time before shifting data
+let shiftFrames = 15; // Frames over which to blend data
+let frameCounter = 0;
+let lerpSpeed = 0.03;
 let blendingProgress = 0; // 0 to 1 progress of blending
-
+let drawBackground = true;
+let backgroundBlend = 0.04;
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
@@ -32,7 +32,7 @@ function setup() {
 }
 
 function draw() {
-    background(0);
+    if(drawBackground) background(0,backgroundBlend);
 
     if (oceanCurrents.length === 0) return;
 
@@ -77,10 +77,6 @@ function updateVisualData() {
             visualArrows[i].speed = lerp(visualArrows[i].speed, oceanCurrents[i].speed, lerpSpeed);
             visualTemps[i] = lerp(visualTemps[i], waterTemps[i]?.temp || 0, lerpSpeed);
             visualTides[i] = lerp(visualTides[i], tideLevels[i]?.level || 0, lerpSpeed);
-
-            // Mouse interaction: reverse the arrow direction if close to the mouse
-            let x = (i % resolution) * (width / resolution) + (width / resolution) / 2;
-            let y = Math.floor(i / resolution) * (height / resolution) + (height / resolution) / 2;
         }
     }
 }
@@ -131,19 +127,19 @@ function drawOceanCurrents() {
 
             let distToMouse = dist(mouseX, mouseY, x, y);
             let angle = visualArrows[i].angle;
-            if (distToMouse < maxDistance) {
-                // Reverse the arrow's direction if it's close enough to the mouse
-                angle = atan2(mouseY - y, mouseX - x) + PI; // 180 degrees opposite direction
+            if (distToMouse < maxDistance && drawBackground) {
+                angle = atan2(mouseY - y, mouseX - x) + PI;
             }
             let length = visualArrows[i].speed / maxspeed * 20;
 
             let endX = x + cos(angle) * length;
             let endY = y + sin(angle) * length;
 
-            let hue = map(visualTemps[i], 0, 30, 240, 0);
-            let alpha = (visualTides[i] + 0.5) * 255;
+            let hue = map(visualTemps[i]*3, 0, 50, 0, 240);
+            let alpha = (visualTides[i]) * 255;
 
             stroke(hue, 255, 255, alpha);
+            strokeWeight(3);
             line(x, y, endX, endY);
         }
     }
@@ -164,7 +160,7 @@ function fetchOceanData() {
     let dates = [];
     for (let i = 0; i < resolution; i++) {
         let date = new Date(today);
-        date.setDate(today.getDate() - i);
+        date.setMonth(today.getMonth() - i);
         dates.push(date.toISOString().split('T')[0]);
     }
 
