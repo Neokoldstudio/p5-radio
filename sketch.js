@@ -11,7 +11,7 @@ let nextArrows = [];
 let nextTemps = [];
 let nextTides = [];
 
-let resolution = 20; // Number of arrows to draw
+let resolution = 50; // Number of arrows to draw
 let maxspeed = 50; // Maximum current speed
 let maxDistance = 80; // Maximum distance from mouse to reverse arrow direction
 let animationProgress = 0;  // Lerp progress (0 to 1)
@@ -23,7 +23,7 @@ let frameCounter = 0;
 let lerpSpeed = 0.03;
 let blendingProgress = 0; // 0 to 1 progress of blending
 let drawBackground = true;
-let drawTrails = false;
+let drawTrails = true;
 let backgroundBlend = 0.06;
 
 function setup() {
@@ -139,8 +139,8 @@ function drawOceanCurrents() {
             let endX = x + cos(angle) * length;
             let endY = y + sin(angle) * length;
 
-            let hue = map(visualTemps[i]*3, 0, 50, 0, 240);
-            let alpha = (visualTides[i]) * 255;
+            let hue = map(visualTemps[i], min(visualTemps), max(visualTemps), 255, 175);
+            let alpha = map(visualTides[i], min(visualTides), max(visualTides), 0, 255);
 
             stroke(hue, 255, 255, alpha);
             strokeWeight(3);
@@ -164,7 +164,7 @@ function fetchOceanData() {
     let dates = [];
     for (let i = 0; i < resolution; i++) {
         let date = new Date(today);
-        date.setMonth(today.getMonth() - i);
+        date.setDate(today.getDate() - i);
         dates.push(date.toISOString().split('T')[0]);
     }
 
