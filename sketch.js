@@ -1,4 +1,6 @@
-let stations = [["8575512", "cb1102"], ["8518750", "n03020"], ["8573927", "cb1301"], ["9414750", "s10010"], ["9418767", "hb0401"], ["9414863","s08010"],["9445958","ks0101"]];
+//to look for stations, got on this website: https://tidesandcurrents.noaa.gov/map/index.html?region=California
+//first IDs are Yellow and Red stations, second IDs are Blue stations
+let stations = [["8575512", "cb1102"], ["8518750", "n03020"], ["8573927", "cb1301"], ["9414750", "s10010"], ["9418767", "hb0401"], ["9414863", "s08010"], ["9445958", "ks0101"]];
 let tideLevels = [];  // Stores tide level for each day
 let waterTemps = [];  // Stores water temperature for each day
 let oceanCurrents = []; // Stores current speed & direction for each day
