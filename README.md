@@ -1,2 +1,2 @@
-# p5-radio
-an generative art piece based on radio waves 
+# p5-waves
+a generative art piece based on oceanographic data
